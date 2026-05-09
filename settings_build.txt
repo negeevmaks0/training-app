@@ -1,1 +1,1 @@
-flet build apk --project "TrainingApp" --product "Training" --org "com.psm.training" --build-version "1.0.0" --build-number 1 --compile-app --cleanup-app --splash-color "#263238" --android-adaptive-icon-background "#263238" --no-android-splash --clear-cache
+flet build apk --project "TrainingApp" --product "Training" --org "com.psm.training" --build-version "1.0.0" --build-number 1 --compile-app --cleanup-app --splash-color "#263238" --android-adaptive-icon-background "#263238" --no-android-splash --clear-cache --split-per-abi --exclude venv .venv build .git
