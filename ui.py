@@ -10,7 +10,9 @@ class UITrainingApp:
             **settings,
             'theme_mode': ft.ThemeMode.DARK,
             'vertical_alignment': ft.MainAxisAlignment.START,
-            'safe_area': True
+            'safe_area': False,
+            'padding': 0,
+            'spacing': 0
         }
 
         self.main_content = ft.Container(expand=True)
@@ -46,6 +48,7 @@ class UITrainingApp:
         nav_bar = ft.NavigationBar(
             selected_index=2,
             bgcolor=ft.Colors.BLUE_GREY_900,
+            height=80,
             indicator_color=ft.Colors.BLUE_400,
             indicator_shape=ft.CircleBorder(),
             overlay_color=ft.Colors.TRANSPARENT,
@@ -63,11 +66,10 @@ class UITrainingApp:
         nav_container = ft.Container(
             content=nav_bar,
             bgcolor=ft.Colors.BLUE_GREY_900,
-            height=80,
-            border_radius=ft.border_radius.only(top_left=30, top_right=30),
-            margin=ft.margin.only(bottom=0, left=0, right=0), 
-            padding=ft.padding.only(bottom=0), 
-            
+            height=90,
+            border_radius=ft.BorderRadius(top_left=30, top_right=30, bottom_left=0, bottom_right=0),
+            # alignment=ft.Alignment(0, 0),
+            padding=ft.Padding(top=5, left=0, right=0, bottom=10),
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=15,
@@ -78,9 +80,23 @@ class UITrainingApp:
 
         self.main_content.content = self.get_home_view()
 
+        safe_main_content = ft.SafeArea(
+            content=ft.Container(
+                content=self.main_content,
+                padding=ft.Padding(top=10, left=10, right=10)
+            ),
+            expand=True,
+        )
+
         self.page.add(
-            self.main_content,
-            nav_container
+            ft.Column(
+                controls=[
+                    safe_main_content,
+                    nav_container
+                ],
+                expand=True,
+                spacing=0
+            )
         )
 
         self.page.update()
@@ -105,7 +121,7 @@ class UITrainingApp:
                         content=ft.Row([
                             ft.Icon(ft.Icons.FITNESS_CENTER, color=ft.Colors.BLUE_400),
                             ft.Text(cat, size=18),
-                            ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE30),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE_30),
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         bgcolor=ft.Colors.BLUE_GREY_800,
                         padding=15,
@@ -138,4 +154,4 @@ class UITrainingApp:
 
 
     def start_ui(self):
-        ft.app(self.main)
+        ft.app(target=self.main, port=0)
