@@ -15,14 +15,14 @@ class UITrainingApp:
 
         self.main_content = ft.Container(expand=True)
 
-
-    def on_nav_change(self, e):
-        views = {
+        self.views = {
             0: self.get_exercises_view(),
             2: self.get_home_view()
         }
 
-        self.main_content.content = views.get(
+
+    def on_nav_change(self, e):
+        self.main_content.content = self.views.get(
             e.control.selected_index,
             ft.Text(f'Stranica {e.control.selected_index + 1}', size=30)
         )
@@ -82,6 +82,8 @@ class UITrainingApp:
             self.main_content,
             nav_container
         )
+
+        self.page.update()
 
 
     def get_exercises_view(self):
