@@ -48,7 +48,7 @@ class UITrainingApp:
         nav_bar = ft.NavigationBar(
             selected_index=2,
             bgcolor=ft.Colors.BLUE_GREY_900,
-            height=80,
+            height=60,
             indicator_color=ft.Colors.BLUE_400,
             indicator_shape=ft.CircleBorder(),
             overlay_color=ft.Colors.TRANSPARENT,
@@ -66,16 +66,17 @@ class UITrainingApp:
         nav_container = ft.Container(
             content=nav_bar,
             bgcolor=ft.Colors.BLUE_GREY_900,
-            height=90,
+            height=100 if self.page.platform == ft.PagePlatform.ANDROID else 85,
             border_radius=ft.BorderRadius(top_left=30, top_right=30, bottom_left=0, bottom_right=0),
             # alignment=ft.Alignment(0, 0),
-            padding=ft.Padding(top=5, left=0, right=0, bottom=10),
+            padding=ft.Padding(top=5, left=15, right=15, bottom=25 if self.page.platform == ft.PagePlatform.ANDROID else 0),
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=15,
                 color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
+
             ),
-            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            # clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
 
         self.main_content.content = self.get_home_view()
@@ -85,7 +86,7 @@ class UITrainingApp:
                 content=self.main_content,
                 padding=ft.Padding(top=10, left=10, right=10)
             ),
-            expand=True,
+            expand=True
         )
 
         self.page.add(
