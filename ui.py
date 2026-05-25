@@ -10,21 +10,19 @@ class UITrainingApp:
             **settings,
             'theme_mode': ft.ThemeMode.DARK,
             'vertical_alignment': ft.MainAxisAlignment.START,
-            'safe_area': False,
-            'padding': 0,
-            'spacing': 0
         }
 
         self.main_content = ft.Container(expand=True)
 
-        self.views = {
+
+
+    def on_nav_change(self, e):
+        views = {
             0: self.get_exercises_view(),
             2: self.get_home_view()
         }
 
-
-    def on_nav_change(self, e):
-        self.main_content.content = self.views.get(
+        self.main_content.content = views.get(
             e.control.selected_index,
             ft.Text(f'Stranica {e.control.selected_index + 1}', size=30)
         )
@@ -103,33 +101,109 @@ class UITrainingApp:
         self.page.update()
 
 
+    def open_add_category_sheet(self, e):
+        self.category_input = ft.TextField(
+            label="Название категории",
+            hint_text="Категория...",
+            border_color=ft.Colors.BLUE_400,
+            border_radius=10,
+            autofocus=True,
+            on_change=lambda _: self.clear_input_error() 
+        )
+
+        self.island_dialog = ft.AlertDialog(
+            modal=False,
+            bgcolor=ft.Colors.TRANSPARENT,
+            content_padding=ft.Padding(0, 0, 0, 0),
+            content=ft.Container(
+                width=340,
+                bgcolor=ft.Colors.BLUE_GREY_900,
+                border_radius=20, 
+                padding=20,
+                content=ft.Column([
+                    ft.Text("Новая категория", size=20, weight="bold"),
+                    self.category_input,
+                    ft.Row([
+                        ft.TextButton(
+                            "Отмена", 
+                            on_click=lambda _: self.close_sheet()
+                        ),
+                        ft.ElevatedButton(
+                            "Добавить",
+                            bgcolor=ft.Colors.BLUE_400,
+                            color=ft.Colors.WHITE,
+                            on_click=self.validate_and_submit 
+                        )
+                    ], alignment=ft.MainAxisAlignment.END, spacing=10)
+                ], tight=True, spacing=20)
+            )
+        )
+
+        self.page.show_dialog(self.island_dialog)
+
+    def clear_input_error(self):
+        if hasattr(self, 'category_input') and self.category_input.error_text:
+            self.category_input.error_text = None
+            self.category_input.update()
+
+    def validate_and_submit(self, e):
+        text_value = self.category_input.value.strip()
+        
+        if not text_value:
+            self.category_input.error_text = "Поле не может быть пустым"
+            self.category_input.update()
+            return
+            
+        if len(text_value) < 2:
+            self.category_input.error_text = "Название слишком короткое"
+            self.category_input.update()
+            return
+
+        print(f"Отправляем в БД: {text_value}")
+        
+        # Здесь будет вызов отправки на сервер: 
+        # asyncio.create_task(self.send_category_to_server(text_value))
+
+    def close_sheet(self):
+        if hasattr(self, 'island_dialog') and self.island_dialog:
+            self.page.pop_dialog()
+
+
     def get_exercises_view(self):
-        categories = ["Грудь", "Спина", "Ноги", "Плечи", "Руки", "Пресс"]
+        categories = []
     
         return ft.Column([
             ft.Text("Библиотека упражнений", size=25, weight="bold"),
             
             ft.Row([
                 ft.TextField(hint_text="Поиск упражнения...", expand=True, border_radius=10),
-                ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.BLUE_400, on_click=lambda _: print("Добавить новое"))
+                ft.IconButton(
+                    icon=ft.Icons.ADD_CIRCLE,
+                    icon_color=ft.Colors.BLUE_400,
+                    on_click=self.open_add_category_sheet
+                )
             ]),
             
-            ft.ListView(
+            ft.Container(
                 expand=True,
-                spacing=10,
-                controls=[
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.FITNESS_CENTER, color=ft.Colors.BLUE_400),
-                            ft.Text(cat, size=18),
-                            ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE_30),
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        bgcolor=ft.Colors.BLUE_GREY_800,
-                        padding=15,
-                        border_radius=10,
-                        on_click=lambda e, c=cat: print(f"Открываем категорию: {c}")
-                    ) for cat in categories
-                ]
+                padding=ft.padding.only(bottom=100), 
+                content=ft.ListView(
+                    expand=True,
+                    spacing=10,
+                    controls=[
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.FITNESS_CENTER, color=ft.Colors.BLUE_400),
+                                ft.Text(cat, size=18),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE_30),
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            bgcolor=ft.Colors.BLUE_GREY_800,
+                            padding=15,
+                            border_radius=10,
+                            on_click=lambda e, c=cat: print(f"Открываем категорию: {c}")
+                        ) for cat in categories
+                    ]
+                )
             )
         ], expand=True, spacing=20)
 
