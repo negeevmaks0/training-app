@@ -3,3 +3,12 @@ flet build apk --project "TrainingApp" --product "Training" --org "com.psm.train
 
 Find bugs on Android:
 adb logcat | findstr /i "python flet flutter"
+
+
+
+sudo docker build -t training-server .
+docker run -d --name training-app-server --network host --restart always -v $(pwd)/database:/app/database training-server
+
+
+/snap/bin/ngrok http 8000 --log stdout > /home/ps-server/ngrok.log 2>&1 &
+3EGc6Xn36fSHSkjbx3jntMmBamS_4dLL2W5yzbNXqG6E7MGPv
