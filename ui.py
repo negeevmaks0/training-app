@@ -1,6 +1,7 @@
 import flet as ft
 
 import asyncio
+import httpx
 
 
 
@@ -14,19 +15,22 @@ class UITrainingApp:
 
         self.main_content = ft.Container(expand=True)
 
+        self.server_url = 'https://geranium-unsavory-fiscally.ngrok-free.dev'
+        self.http_client = httpx.AsyncClient(timeout=4.0)
+        self.categories_cache = None
+
 
 
     def on_nav_change(self, e):
         views = {
-            0: self.get_exercises_view(),
-            2: self.get_home_view()
+            0: self.get_exercises_view,
+            2: self.get_home_view
         }
 
-        self.main_content.content = views.get(
-            e.control.selected_index,
-            ft.Text(f'Stranica {e.control.selected_index + 1}', size=30)
-        )
+        idx = e.control.selected_index
+        view_func = views.get(idx, lambda: ft.Text(f'Stranica {idx + 1}', size=30))
 
+        self.main_content.content = view_func()
         self.page.update()
 
 
@@ -98,6 +102,7 @@ class UITrainingApp:
             )
         )
 
+        asyncio.create_task(self.pre_warm_server())
         self.page.update()
 
 
@@ -107,8 +112,7 @@ class UITrainingApp:
             hint_text="Категория...",
             border_color=ft.Colors.BLUE_400,
             border_radius=10,
-            autofocus=True,
-            on_change=lambda _: self.clear_input_error() 
+            autofocus=True
         )
 
         self.island_dialog = ft.AlertDialog(
@@ -141,37 +145,121 @@ class UITrainingApp:
 
         self.page.show_dialog(self.island_dialog)
 
-    def clear_input_error(self):
-        if hasattr(self, 'category_input') and self.category_input.error_text:
-            self.category_input.error_text = None
-            self.category_input.update()
 
     def validate_and_submit(self, e):
         text_value = self.category_input.value.strip()
         
-        if not text_value:
-            self.category_input.error_text = "Поле не может быть пустым"
-            self.category_input.update()
+        if not text_value or len(text_value) < 2:
             return
             
-        if len(text_value) < 2:
-            self.category_input.error_text = "Название слишком короткое"
-            self.category_input.update()
-            return
-
         print(f"Отправляем в БД: {text_value}")
         
-        # Здесь будет вызов отправки на сервер: 
-        # asyncio.create_task(self.send_category_to_server(text_value))
+        asyncio.create_task(self.send_category_to_server(text_value))
+
+
+    async def send_category_to_server(self, category_name):
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    f"{self.server_url}/add_category",
+                    json={"name": category_name},
+                    timeout=5.0
+                )
+                
+                if response.status_code == 200:
+                    self.close_sheet()
+                    
+                    self.main_content.content = self.get_exercises_view()
+                    self.page.update()
+
+                self.categories_cache = None
+                    
+            except Exception as ex:
+                self.category_input.error_text = "Ошибка сети. Сервер недоступен."
+                self.category_input.update()
+
 
     def close_sheet(self):
         if hasattr(self, 'island_dialog') and self.island_dialog:
             self.page.pop_dialog()
 
 
-    def get_exercises_view(self):
+    async def load_exercises_data_from_server(self):
+        if self.categories_cache:
+            self.render_categories(self.categories_cache)
+            
         categories = []
-    
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.server_url}/get_categorys")
+
+                if response.status_code == 200:
+                    categories = response.json()
+                    self.categories_cache = categories 
+
+        except Exception as e:
+            if not self.categories_cache:
+                self.categories_area.content = ft.Text("Ошибка сети: Сервер недоступен", color="red")
+                self.page.update()
+
+            return
+
+        self.render_categories(categories)
+
+
+    def render_categories(self, categories):
+        if not categories:
+            self.categories_area.content = ft.Text("Библиотека пуста. Нажмите на плюс чтобы добавить.", italic=True)
+            self.page.update()
+
+            return
+
+        list_view = ft.ListView(
+            expand=True,
+            spacing=10,
+            controls=[
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.FITNESS_CENTER, color=ft.Colors.BLUE_400),
+                        ft.Text(cat["name"], size=18),
+                        ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE_30),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    bgcolor=ft.Colors.BLUE_GREY_800,
+                    padding=15,
+                    border_radius=10,
+                    on_click=lambda e, c=cat["name"]: print(f"Открываем категорию: {c}")
+                ) for cat in categories
+            ]
+        )
+
+        self.categories_area.content = list_view
+        self.page.update()
+
+
+    async def pre_warm_server(self):
+        try:
+            response = await self.http_client.get(f"{self.server_url}/get_categorys")
+
+            if response.status_code == 200:
+                self.categories_cache = response.json()
+
+        except:
+            self.categories_cache = None
+
+
+    def get_exercises_view(self):
+        self.categories_area = ft.Container(
+            content=ft.Row([
+                ft.ProgressRing(width=30, height=30, color=ft.Colors.BLUE_400),
+                ft.Text("Загрузка категорий...", italic=True, size=16)
+            ], alignment=ft.MainAxisAlignment.CENTER),
+            alignment=ft.Alignment(0, 0),
+            expand=True
+        )
+
+        asyncio.create_task(self.load_exercises_data_from_server())
+
         return ft.Column([
             ft.Text("Библиотека упражнений", size=25, weight="bold"),
             
@@ -184,27 +272,7 @@ class UITrainingApp:
                 )
             ]),
             
-            ft.Container(
-                expand=True,
-                padding=ft.padding.only(bottom=100), 
-                content=ft.ListView(
-                    expand=True,
-                    spacing=10,
-                    controls=[
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Icon(ft.Icons.FITNESS_CENTER, color=ft.Colors.BLUE_400),
-                                ft.Text(cat, size=18),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.WHITE_30),
-                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                            bgcolor=ft.Colors.BLUE_GREY_800,
-                            padding=15,
-                            border_radius=10,
-                            on_click=lambda e, c=cat: print(f"Открываем категорию: {c}")
-                        ) for cat in categories
-                    ]
-                )
-            )
+            self.categories_area
         ], expand=True, spacing=20)
 
 
